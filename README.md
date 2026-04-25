@@ -13,7 +13,7 @@ gate-system/
 ├── mock/
 │   ├── mock_gen.py      # Standalone mock generator
 │   └── test_packet.py   # Unit tests
-└── requirements.txt
+
 ```
 
 ## Packet Format
