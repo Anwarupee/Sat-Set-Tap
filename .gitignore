@@ -1,0 +1,19 @@
+# Python - Folder hasil compile (WAJIB)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment Variables (Sangat Penting untuk Keamanan)
+.env
+.venv/
+env/
+venv/
+
+# Folder log atau database lokal (opsional)
+*.log
+*.sqlite3
+
+# Folder setting IDE
+.vscode/
+.idea/
