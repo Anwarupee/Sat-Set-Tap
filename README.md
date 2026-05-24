@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # Sat Set Tap
+=======
+# TheGate 🚪
+>>>>>>> d191a61 (push)
 
 > Sistem manajemen akses event berbasis IoT — menggantikan QR/gelang dengan tap e-KTP via LoRa mesh network.
 
@@ -121,8 +125,12 @@ Sat Set Tap/
 
 ```bash
 # Clone repo
+<<<<<<< HEAD
 git clone https://github.com/Anwarupee/Sat-Set-Tap.git
 git clone https://github.com/rpsreal/pySX127x
+=======
+git clone https://github.com/<username>/TheGate.git
+>>>>>>> d191a61 (push)
 cd TheGate
 
 # Setup otomatis
@@ -286,4 +294,8 @@ MIT License — bebas digunakan dengan menyertakan atribusi.
 
 <p align="center">
   <sub>Dibuat untuk lomba IoT · Sat Set Tap</sub>
+<<<<<<< HEAD
 </p>
+=======
+</p>
+>>>>>>> d191a61 (push)
