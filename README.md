@@ -289,6 +289,5 @@ MIT License — bebas digunakan dengan menyertakan atribusi.
 <p align="center">
   <sub>Dibuat untuk lomba IoT · Sat Set Tap</sub>
 </p>
-=======
-</p>
+
 
