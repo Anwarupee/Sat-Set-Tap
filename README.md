@@ -1,8 +1,5 @@
-<<<<<<< HEAD
 # Sat Set Tap
-=======
-# TheGate 🚪
->>>>>>> d191a61 (push)
+
 
 > Sistem manajemen akses event berbasis IoT — menggantikan QR/gelang dengan tap e-KTP via LoRa mesh network.
 
