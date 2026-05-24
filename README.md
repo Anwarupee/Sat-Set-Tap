@@ -122,13 +122,10 @@ Sat Set Tap/
 
 ```bash
 # Clone repo
-<<<<<<< HEAD
+
 git clone https://github.com/Anwarupee/Sat-Set-Tap.git
 git clone https://github.com/rpsreal/pySX127x
-=======
-git clone https://github.com/<username>/TheGate.git
->>>>>>> d191a61 (push)
-cd TheGate
+cd Sat-Set-Tap
 
 # Setup otomatis
 bash raspi/setup/setup_raspi.sh
