@@ -1,19 +1,35 @@
-# Python - Folder hasil compile (WAJIB)
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
-*.pyd
-
-# Environment Variables (Sangat Penting untuk Keamanan)
 .env
-.venv/
-env/
 venv/
+.venv/
 
-# Folder log atau database lokal (opsional)
-*.log
-*.sqlite3
+# Secrets — JANGAN pernah commit ini
+secrets.py
+config.local.py
+*.key
+*.pem
 
-# Folder setting IDE
+# Redis
+dump.rdb
+
+# Arduino
+*.elf
+*.bin
+*.hex
+build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
 .vscode/
 .idea/
+*.swp
+
+# Logs
+*.log
+logs/
