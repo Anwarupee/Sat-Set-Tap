@@ -32,8 +32,4 @@ Thumbs.db
 
 # Logs
 *.log
-<<<<<<< HEAD
 logs/
-=======
-logs/
->>>>>>> d191a61 (push)
