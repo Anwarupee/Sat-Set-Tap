@@ -295,4 +295,4 @@ MIT License — bebas digunakan dengan menyertakan atribusi.
 </p>
 =======
 </p>
->>>>>>> d191a61 (push)
+
