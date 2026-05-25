@@ -1,6 +1,5 @@
 # Sat Set Tap
 
-
 > Sistem manajemen akses event berbasis IoT — menggantikan QR/gelang dengan tap e-KTP via LoRa mesh network.
 
 ![Status](https://img.shields.io/badge/status-active-brightgreen)
@@ -89,6 +88,12 @@ Contoh: `0101188235CA030000 1EFC93`
 | Arduino Uno | Mikrokontroler |
 | PN532 #1 | I2C (DIP: SW1=ON SW2=OFF) |
 | PN532 #2 | SPI (DIP: SW1=OFF SW2=ON) |
+
+---
+
+## Wiring
+
+Lihat [docs/wiring.md](docs/wiring.md) untuk diagram lengkap semua node.
 
 ---
 
@@ -289,5 +294,3 @@ MIT License — bebas digunakan dengan menyertakan atribusi.
 <p align="center">
   <sub>Dibuat untuk lomba IoT · Sat Set Tap</sub>
 </p>
-
-
