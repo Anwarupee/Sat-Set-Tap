@@ -1,20 +1,12 @@
 /*
-  registration_reader.ino v2
-  Arduino Uno + PN532 #1 (I2C) + PN532 #2 (SPI)
+  registration_reader.ino v3
+  Arduino Uno + 1x PN532 (I2C)
 
-  PN532 #1 — I2C:
+  PN532 — I2C:
     DIP Switch: SW1=ON, SW2=OFF
     SDA → A4
     SCL → A5
     VCC → 3.3V, GND → GND
-
-  PN532 #2 — SPI:
-    DIP Switch: SW1=OFF, SW2=ON
-    SS   → D10
-    MOSI → D11
-    MISO → D12
-    SCK  → D13
-    VCC  → 3.3V, GND → GND
 
   LED feedback:
     LED Hijau → D8 (terdaftar baru)
@@ -26,28 +18,19 @@
 */
 
 #include <Wire.h>
-#include <SPI.h>
 #include <Adafruit_PN532.h>
 
-// ── PN532 #1 via I2C ──────────────────────────────────────────
-#define PN532_IRQ_1  2
-#define PN532_RST_1  3
-Adafruit_PN532 nfc1(PN532_IRQ_1, PN532_RST_1);  // I2C
-
-// ── PN532 #2 via SPI ──────────────────────────────────────────
-#define PN532_SS_2   10
-Adafruit_PN532 nfc2(PN532_SS_2);                 // SPI
+// ── PN532 via I2C (SDA=A4, SCL=A5) ────────────────────────────
+Adafruit_PN532 nfc;
 
 // ── LED ───────────────────────────────────────────────────────
 #define LED_OK  8
 #define LED_ERR 9
 
-bool nfc1_ready = false;
-bool nfc2_ready = false;
+bool nfc_ready = false;
 
 #define SCAN_COOLDOWN 2000
-unsigned long lastScan1 = 0;
-unsigned long lastScan2 = 0;
+unsigned long lastScan = 0;
 
 
 String uidToHex(uint8_t *uid, uint8_t len) {
@@ -122,24 +105,14 @@ void setup() {
   digitalWrite(LED_OK,  HIGH); delay(200); digitalWrite(LED_OK,  LOW);
   digitalWrite(LED_ERR, HIGH); delay(200); digitalWrite(LED_ERR, LOW);
 
-  // Init PN532 #1 (I2C)
-  nfc1.begin();
-  if (nfc1.getFirmwareVersion()) {
-    nfc1.SAMConfig();
-    nfc1_ready = true;
-    Serial.println("# PN532 #1 OK (I2C)");
+  // Init PN532 (I2C)
+  nfc.begin();
+  if (nfc.getFirmwareVersion()) {
+    nfc.SAMConfig();
+    nfc_ready = true;
+    Serial.println("# PN532 OK (I2C)");
   } else {
-    Serial.println("# PN532 #1 GAGAL — cek DIP switch SW1=ON SW2=OFF");
-  }
-
-  // Init PN532 #2 (SPI)
-  nfc2.begin();
-  if (nfc2.getFirmwareVersion()) {
-    nfc2.SAMConfig();
-    nfc2_ready = true;
-    Serial.println("# PN532 #2 OK (SPI)");
-  } else {
-    Serial.println("# PN532 #2 GAGAL — cek DIP switch SW1=OFF SW2=ON");
+    Serial.println("# PN532 GAGAL — cek DIP switch SW1=ON SW2=OFF");
   }
 
   Serial.println("READY");
@@ -147,6 +120,5 @@ void setup() {
 
 
 void loop() {
-  if (nfc1_ready) scanAndSend(nfc1, lastScan1, "Reader1");
-  if (nfc2_ready) scanAndSend(nfc2, lastScan2, "Reader2");
+  if (nfc_ready) scanAndSend(nfc, lastScan, "Reader");
 }

@@ -26,12 +26,18 @@ class Command(IntEnum):
     RESPONSE_OK  = 0x02
     RESPONSE_DENY= 0x03
     PING         = 0x04
+    LOCKDOWN     = 0x05  # RPi -> Gate: kunci, tolak semua tap
+    UNLOCK       = 0x06  # RPi -> Gate: buka kunci
+    HEARTBEAT    = 0x07  # Gate -> RPi: heartbeat tiap 30 detik
 
 COMMAND_LABELS = {
     Command.TAP_REQUEST:   "TAP_REQ",
     Command.RESPONSE_OK:   "RESP_OK",
     Command.RESPONSE_DENY: "RESP_DENY",
     Command.PING:          "PING",
+    Command.LOCKDOWN:     "LOCKDOWN",
+    Command.UNLOCK:       "UNLOCK",
+    Command.HEARTBEAT:    "HEARTBEAT",
 }
 
 PACKET_SIZE     = 12

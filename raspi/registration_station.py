@@ -47,14 +47,12 @@ class RegistrationStation:
             }
 
         now = time.strftime("%Y-%m-%dT%H:%M:%S")
-        self.r.hset(reg_key, mapping={
-            "uid":           uid,
-            "name":          name,
-            "token_max":     TOKEN_MAX,
-            "token_left":    TOKEN_MAX,
-            "registered_at": now,
-            "last_entry":    "-",
-        })
+        self.r.hset(reg_key, "uid", uid)
+        self.r.hset(reg_key, "name", name)
+        self.r.hset(reg_key, "token_max", TOKEN_MAX)
+        self.r.hset(reg_key, "token_left", TOKEN_MAX)
+        self.r.hset(reg_key, "registered_at", now)
+        self.r.hset(reg_key, "last_entry", "-")
         self.r.sadd("gate:registered:all", uid)
 
         log.info(f"✓ DAFTAR | UID: {uid} | Token: {TOKEN_MAX}x | {now}")
@@ -131,13 +129,16 @@ def run_serial(station: RegistrationStation, port: str, baud=9600):
                     count += 1
 
                     if result["status"] == "new":
-                        log.info(f"✓ TERDAFTAR #{count} | {uid} | Token: {result['token_left']}x")
                         ser.write(b"OK\n")
+                        name = input("Nama (Enter skip)> ").strip()
+                        if name:
+                            station.r.hset(f"gate:registered:{uid}", "name", name)
+                        log.info(f"✓ TERDAFTAR #{count} | {uid} | Token: {result['token_left']}x")
                     else:
+                        ser.write(b"DUP\n")
                         log.warning(f"⚠ SUDAH ADA  | {uid} | "
                                     f"Token: {result['token_left']}/{result['token_max']}x "
                                     f"| Daftar: {result['registered_at']}")
-                        ser.write(b"DUP\n")
 
             except KeyboardInterrupt:
                 log.info(f"\nRegistrasi selesai. Total terdaftar sesi ini: {count} peserta")

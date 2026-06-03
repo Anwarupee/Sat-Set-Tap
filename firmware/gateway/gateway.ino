@@ -17,6 +17,7 @@
 
 #define DEDUP_WINDOW_MS 3000
 #define DEDUP_LIST_SIZE 20
+#define RESP_TX_DELAY_MS 200   // jeda sebelum broadcast RESP (hindari collision dgn relay TX)
 
 struct SeenEntry { uint32_t uid; uint32_t ts; };
 SeenEntry seenList[DEDUP_LIST_SIZE];
@@ -95,6 +96,10 @@ void processSerialLine(String line) {
     return;
   }
 
+  // Jeda sebelum TX — beri waktu relay selesai forward TAP_REQ
+  // agar tidak terjadi collision antara relay TX dan gateway RESP
+  delay(RESP_TX_DELAY_MS);
+
   // Kirim via LoRa ke gate
   LoRa.beginPacket();
   LoRa.print(hex);
@@ -160,8 +165,8 @@ void loop() {
   uint16_t crcRecv = ((uint16_t)pkt[10]<<8)|pkt[11];
   if (crc16(pkt, 10) != crcRecv) return;
 
-  // Hanya proses TAP_REQUEST
-  if (pkt[0] != 0x01) return;
+  // Hanya proses TAP_REQUEST dan HEARTBEAT
+  if (pkt[0] != 0x01 && pkt[0] != 0x07) return;
 
   uint32_t uid32 = uidToUint32(&pkt[2]);
   if (checkAndAddSeen(uid32)) {

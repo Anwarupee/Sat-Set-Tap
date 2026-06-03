@@ -3,8 +3,10 @@ receiver.py v5 — Thread-safe serial dengan response queue.
 Gate tap bersamaan tidak akan saling block.
 """
 
-import argparse, logging, sys, time, threading, queue, os
+import argparse, logging, sys, time, threading, queue
 from packet import parse_hex_packet, build_hex_packet, Command
+from anomaly import AnomalyDetector
+import threading
 from redis_handler import GateRedis
 
 logging.basicConfig(
@@ -67,16 +69,26 @@ def parse_serial_line(line: str):
 
 
 def handle_packet(hex_str: str, rssi: int, db: GateRedis):
+    received_at = time.time()
     try:
         packet = parse_hex_packet(hex_str)
     except ValueError as e:
         log.error(f"✗ PARSE/CRC ERR | '{hex_str}' | {e}")
         return
 
+    if packet.command == Command.HEARTBEAT:
+        db.store_heartbeat(packet.gate_id, rssi=rssi)
+        log.debug(f"❤️ HEARTBEAT | Gate {packet.gate_id} | RSSI: {rssi}")
+        return
+
     if packet.command != Command.TAP_REQUEST:
         return
 
-    result = db.store_tap(packet)
+    result = db.store_tap(packet, rssi=rssi)
+
+    # Hitung server-side processing latency
+    latency_ms = int((time.time() - received_at) * 1000)
+    db.store_latency(packet.gate_id, latency_ms)
     icon   = STATUS_ICON.get(result["status"], "?")
     rssi_w = " ⚡LEMAH" if rssi < -100 else ""
 
@@ -91,6 +103,35 @@ def handle_packet(hex_str: str, rssi: int, db: GateRedis):
     allowed = result["status"] == "allowed"
     cmd     = Command.RESPONSE_OK if allowed else Command.RESPONSE_DENY
     send_response(cmd, packet.gate_id, packet.ktp_uid)
+
+
+def _send_lockdown_cmd(gate_id: int, lock: bool):
+    """Masukkan CMD_LOCKDOWN atau CMD_UNLOCK ke response_queue."""
+    cmd     = Command.LOCKDOWN if lock else Command.UNLOCK
+    hex_pkt = build_hex_packet(cmd, gate_id, "00000000")
+    response_queue.put(f"RESP:{hex_pkt}\n")
+    action  = "🔒 LOCKDOWN" if lock else "🔓 UNLOCK"
+    log.warning(f"{action} | Gate {gate_id}")
+
+
+def _poll_lockdown(ser, detector: AnomalyDetector):
+    """
+    Thread polling Redis tiap 2 detik.
+    Kirim CMD_LOCKDOWN jika gate baru terkunci.
+    Kirim CMD_UNLOCK jika gate di-unlock dari dashboard.
+    """
+    prev_locked = set()
+    while True:
+        try:
+            current_locked = set(str(g) for g in detector.get_locked_gates())
+            for gid in current_locked - prev_locked:
+                _send_lockdown_cmd(int(gid), lock=True)
+            for gid in prev_locked - current_locked:
+                _send_lockdown_cmd(int(gid), lock=False)
+            prev_locked = current_locked
+        except Exception as e:
+            log.error(f"poll_lockdown: {e}")
+        time.sleep(2)
 
 
 def run_serial(db: GateRedis, port: str, baudrate=115200):
@@ -113,6 +154,11 @@ def run_serial(db: GateRedis, port: str, baudrate=115200):
     writer = threading.Thread(target=send_response_worker, args=(ser,), daemon=True)
     writer.start()
 
+    # Start lockdown polling thread
+    detector = AnomalyDetector(db.r)
+    poll_thread = threading.Thread(target=_poll_lockdown, args=(ser, detector), daemon=True)
+    poll_thread.start()
+
     # Main thread: baca Serial
     while True:
         try:
@@ -122,6 +168,19 @@ def run_serial(db: GateRedis, port: str, baudrate=115200):
             if not line: continue
             if line.startswith("#"):
                 log.debug(f"GW: {line[1:].strip()}")
+                continue
+
+            # Handle LATENCY line dari gate node
+            if line.startswith("[LATENCY]"):
+                try:
+                    # Format: [LATENCY] gate=1 ms=234
+                    parts = line.replace("[LATENCY]", "").strip().split()
+                    gid = int(parts[0].split("=")[1])
+                    lat = int(parts[1].split("=")[1])
+                    db.store_latency(gid, lat)
+                    log.debug(f"LATENCY Gate {gid}: {lat}ms")
+                except Exception:
+                    pass
                 continue
 
             result = parse_serial_line(line)
@@ -153,12 +212,13 @@ def run_mock(db: GateRedis):
 
     # Register beberapa UID dulu untuk test
     for uid in MOCK_UIDS[:3]:
-        db.r.hset(f"gate:registered:{uid}", mapping={
-            "uid": uid, "name": f"Test {uid[:4]}",
-            "token_max": 3, "token_left": 3,
-            "registered_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-            "last_entry": "-",
-        })
+        key = f"gate:registered:{uid}"
+        db.r.hset(key, "uid", uid)
+        db.r.hset(key, "name", f"Test {uid[:4]}")
+        db.r.hset(key, "token_max", 3)
+        db.r.hset(key, "token_left", 3)
+        db.r.hset(key, "registered_at", time.strftime("%Y-%m-%dT%H:%M:%S"))
+        db.r.hset(key, "last_entry", "-")
         db.r.sadd("gate:registered:all", uid)
     log.info(f"Mock: {len(MOCK_UIDS[:3])} UID di-register\n")
 
@@ -200,11 +260,13 @@ def main():
     group.add_argument("--stdin",  action="store_true")
     parser.add_argument("--redis-host", default="localhost")
     parser.add_argument("--redis-port", type=int, default=6379)
-    parser.add_argument("--redis-pass", default=os.getenv("REDIS_PASS", ""))
+    parser.add_argument("--redis-pass", default=None)
     parser.add_argument("--baud",       type=int, default=115200)
+    parser.add_argument("--disable-token", action="store_true", help="Nonaktifkan sistem token untuk stress test")
     args = parser.parse_args()
 
-    db = GateRedis(host=args.redis_host, port=args.redis_port, password=args.redis_pass)
+    db = GateRedis(host=args.redis_host, port=args.redis_port, password=args.redis_pass,
+                   token_enabled=not args.disable_token)
     if not db.ping():
         log.error("Redis tidak jalan!")
         sys.exit(1)
