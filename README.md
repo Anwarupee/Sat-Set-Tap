@@ -45,7 +45,7 @@ Setiap tap KTP menghasilkan packet **12 bytes (24 char hex)**:
 
 | Byte | Field | Ukuran | Keterangan |
 |------|-------|--------|------------|
-| 0 | Command | 1 byte | `0x01`=TAP_REQ · `0x02`=RESP_OK · `0x03`=RESP_DENY |
+| 0 | Command | 1 byte | `0x01`=TAP_REQ · `0x02`=RESP_OK · `0x03`=RESP_DENY · `0x04`=PING · `0x05`=LOCKDOWN · `0x06`=UNLOCK · `0x07`=HEARTBEAT |
 | 1 | Gate ID | 1 byte | ID gate pengirim (1–255) |
 | 2–5 | KTP UID | 4 byte | UID chip e-KTP dari PN532 |
 | 6 | Hop Count | 1 byte | Sisa hop relay (mulai 3, berkurang tiap lompat) |
@@ -53,7 +53,7 @@ Setiap tap KTP menghasilkan packet **12 bytes (24 char hex)**:
 | 8–9 | Timestamp | 2 byte | Detik sejak boot (0–65535) |
 | 10–11 | CRC-16 | 2 byte | Checksum byte 0–9 (CCITT-FALSE) |
 
-Contoh: `0101188235CA030000 1EFC93`
+Contoh: `0101188235CA0300001EFC93`
 
 ---
 
@@ -86,8 +86,7 @@ Contoh: `0101188235CA030000 1EFC93`
 | Komponen | Keterangan |
 |----------|------------|
 | Arduino Uno | Mikrokontroler |
-| PN532 #1 | I2C (DIP: SW1=ON SW2=OFF) |
-| PN532 #2 | SPI (DIP: SW1=OFF SW2=ON) |
+| PN532 | I2C (DIP: SW1=ON SW2=OFF) |
 
 ---
 
@@ -108,6 +107,8 @@ Sat Set Tap/
 │   └── registration_reader/# Arduino reader H-1
 ├── raspi/                  # Kode Raspberry Pi
 │   ├── receiver/           # Core: packet parser + Redis handler
+│   ├── anomaly.py          # AI Security — deteksi anomali real-time
+│   ├── predictor.py        # AI Engine — prediksi kepadatan gate
 │   ├── dashboard.py        # Web dashboard FastAPI
 │   ├── registration_station.py
 │   ├── requirements.txt
@@ -242,8 +243,16 @@ Fitur:
 - **Realtime** — update otomatis via WebSocket
 - **Stats** — peserta terdaftar, sudah masuk, total tap
 - **Chart per gate** — frekuensi tap per menit, toggle Gate 1/2/dst
+- **AI Forecast** — prediksi kepadatan per gate 5 menit ke depan (HIGH/MED/LOW)
+- **Security Monitor** — 4 jenis deteksi anomali (tailgating, credential sharing, gate silent, unknown flood) + auto-lockdown
+- **Network Status** — visualisasi latency + RSSI signal bars per gate
+- **Lockdown Controls** — kunci/buka kunci gate dari jarak jauh
 - **Load balancer** — alert otomatis jika gate ramai tidak merata
 - **Event log** — timestamp millisecond, nama peserta, sisa token
+- **Import CSV** — registrasi massal ribuan peserta via upload file
+- **Export CSV** — download seluruh event log
+- **Revoke UID** — hapus peserta individu dari dashboard
+- **Dark/Light theme** — toggle tema
 - **Flush** — reset event atau reset semua data
 
 ---
@@ -256,6 +265,12 @@ python3 tests/test_packet.py
 
 # Test koneksi RPi (Redis + packet)
 python3 tests/test_raspi.py
+
+# Stress test server-side throughput
+python3 tests/stress_test.py --gates 4 --duration 10 --uids 100
+
+# Pipeline benchmark (tanpa Redis)
+python3 tests/pipeline_benchmark.py --gates 4 --duration 5 --uids 100
 
 # Dry run dengan mock data
 python3 raspi/receiver/receiver.py --mock --redis-pass <pass>
@@ -270,6 +285,8 @@ python3 raspi/receiver/receiver.py --mock --redis-pass <pass>
 - **CRC-16** — setiap packet divalidasi, packet corrupt dibuang
 - **Tailscale VPN** — akses remote hanya via jaringan privat
 - **Token system** — setiap UID punya kuota masuk terbatas
+- **AI Anomaly Detection** — 4 jenis anomali real-time (tailgating, credential sharing, gate silent, unknown flood)
+- **Auto-lockdown** — gate otomatis dikunci jarak jauh saat anomali HIGH terdeteksi
 
 ---
 
